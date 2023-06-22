@@ -1,5 +1,3 @@
--- test 1067
-
 WITH test_info AS
 (
 SELECT
@@ -36,11 +34,12 @@ WHEN COALESCE(install__ad_click__impression__bid__creative__ad_format,reeng_clic
 ELSE 'html-interstitial' END AS  ad_format
 , COALESCE(attribution_event__click__impression__bid__creative__type, reeng_click__impression__bid__creative__type, install__ad_click__impression__bid__creative__type) AS creative_type
 , IF(install__tracker_params__idfa NOT IN ('', '00000000-0000-0000-0000-000000000000') AND install__tracker_params__idfa = install__ad_click__impression__bid__bid_request__device__platform_specific_id,'yes','no') AS idfa_match
-, IF(install__tracker_params__idfa in ('', '00000000-0000-0000-0000-000000000000') OR install__ad_click__impression__bid__bid_request__device__platform_specific_id IN ('', '00000000-0000-0000-0000-000000000000'),'yes','no') AS idfa_missing
+, IF(install__tracker_params__idfa IN ('', '00000000-0000-0000-0000-000000000000') OR install__ad_click__impression__bid__bid_request__device__platform_specific_id IN ('', '00000000-0000-0000-0000-000000000000'),'yes','no') AS idfa_missing
 , install__tracker_params__match_type AS match_type
 , install__ad_click__impression__bid__bid_request__device__model_data__name AS bidrequest_normalized_device_model
 , IF(install__ad_click__impression__bid__bid_request__device__model_data__name = pod_device_model,'yes','no') AS normalized_device_model_match
 , IF(install__ad_click__impression__bid__bid_request__device__model_data__name LIKE '%Unknown' OR pod_device_model LIKE '%Unknown' OR '' IN (pod_device_model, install__ad_click__impression__bid__bid_request__device__model_data__name) ,'yes','no') AS unknown_device_model
+, COALESCE(install__ad_click__impression__bid__campaign_tracker, reeng_click__impression__bid__campaign_tracker, attribution_event__click__impression__bid__campaign_tracker) AS MMPs
 , sum(0) AS impressions
 , sum(0) AS spend_micros
 , sum(0) AS revenue_micros
@@ -66,7 +65,7 @@ AND COALESCE(attribution_event__click__impression__bid__ad_group_type, reeng_cli
 AND COALESCE(attribution_event__click__impression__bid__app_platform, reeng_click__impression__bid__app_platform, install__ad_click__impression__bid__app_platform) = 'IOS'
 AND IF(skan_params__version IS NULL OR skan_params__version = ''
 , COALESCE(attribution_event__click__impression__bid__sk_ad_network_response__version, reeng_click__impression__bid__sk_ad_network_response__version, install__ad_click__impression__bid__sk_ad_network_response__version), skan_params__version) IS NOT NULL -- skan_compatible
-GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19)
+GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)
 ,
 funnel AS
 (
@@ -93,6 +92,7 @@ ELSE 'html-interstitial' END AS  ad_format
 , 'N/A' AS bidrequest_normalized_device_model
 , 'N/A' AS normalized_device_model_match
 , 'N/A' AS unknown_device_model
+, bid__campaign_tracker AS MMPs
 , sum(1) AS impressions
 , sum(spend_micros) AS spend_micros
 , sum(revenue_micros) AS revenue_micros
@@ -114,7 +114,7 @@ AND bid__campaign_tracker_type != 'SKAN'
 AND bid__app_platform = 'IOS'
 AND bid__ad_group_type = 'user-acquisition'
 AND bid__sk_ad_network_response__version IS NOT NULL -- skan_compatible
-GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
 
 UNION ALL
 
@@ -141,6 +141,7 @@ ELSE 'html-interstitial' END AS ad_format
 , 'N/A' AS bidrequest_normalized_device_model
 , 'N/A' AS normalized_device_model_match
 , 'N/A' AS unknown_device_model
+, impression__bid__campaign_tracker AS MMPs
 , sum(0) AS impressions
 , sum(0) AS spend_micros
 , sum(0) AS revenue_micros
@@ -163,7 +164,7 @@ AND impression__bid__campaign_tracker_type != 'SKAN'
 AND impression__bid__app_platform = 'IOS'
 AND impression__bid__ad_group_type = 'user-acquisition'
 AND impression__bid__sk_ad_network_response__version IS NOT NULL -- skan_compatible
-GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
 
 UNION ALL
 
@@ -190,6 +191,7 @@ ELSE 'html-interstitial' END AS ad_format
 , 'N/A' AS bidrequest_normalized_device_model
 , 'N/A' AS normalized_device_model_match
 , 'N/A' AS unknown_device_model
+, impression__bid__campaign_tracker AS MMPs
 , sum(0) AS impressions
 , sum(0) AS spend_micros
 , sum(0) AS revenue_micros
@@ -212,7 +214,7 @@ AND impression__bid__campaign_tracker_type != 'SKAN'
 AND impression__bid__app_platform = 'IOS'
 AND impression__bid__ad_group_type = 'user-acquisition'
 AND impression__bid__sk_ad_network_response__version IS NOT NULL -- skan_compatible
-GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
 
 UNION ALL
 
@@ -239,6 +241,7 @@ ELSE 'html-interstitial' end AS ad_format
 , ad_click__impression__bid__bid_request__device__model_data__name AS bidrequest_normalized_device_model
 , IF(ad_click__impression__bid__bid_request__device__model_data__name = pod_device_model ,'yes','no') AS normalized_device_model_match
 , IF(ad_click__impression__bid__bid_request__device__model_data__name LIKE '%Unknown' OR pod_device_model LIKE '%Unknown' OR '' IN (pod_device_model, ad_click__impression__bid__bid_request__device__model_data__name) ,'yes','no') AS unknown_device_model
+, ad_click__impression__bid__campaign_tracker AS MMPs
 , sum(0) AS impressions
 , sum(0) AS spend_micros
 , sum(0) AS revenue_micros
@@ -262,7 +265,7 @@ AND ad_click__impression__bid__ad_group_type = 'user-acquisition'
 AND ad_click__impression__bid__app_platform = 'IOS'
 AND IF(skan_params__version IS NULL OR skan_params__version = ''
 , ad_click__impression__bid__sk_ad_network_response__version, skan_params__version) IS NOT NULL -- skan_compatible
-GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
 
 UNION ALL
 
@@ -285,6 +288,7 @@ impression_at
 , bidrequest_normalized_device_model
 , normalized_device_model_match
 , unknown_device_model
+, MMPs
 , sum(0) AS impressions
 , sum(0) AS spend_micros
 , sum(revenue_micros) AS revenue_micros
@@ -299,7 +303,7 @@ impression_at
 , sum(power(least(CAST(customer_revenue_micros AS double)/1000000,500),2)) AS squared_capped_customer_revenue
 FROM uncapped_rev_per_auction u
 --dt >= '2023-03-30T00' --AND dt < '2023-03-24T02'
-GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
 )
 SELECT
 impression_at
@@ -314,6 +318,7 @@ impression_at
 , ad_format
 , creative_type
 , device_family
+, MMPs
 , b.company AS customer_name
 , c.display_name AS dest_app_name
 , c.salesforce_account_level AS account_level
@@ -340,4 +345,4 @@ ON a.dest_app_id = c.id
 and a.customer_id = c.customer_id
 LEFT JOIN pinpoint.public.ab_test_groups atg
 ON ab_test_group_id = atg.id
-GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
